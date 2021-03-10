@@ -1,0 +1,5 @@
+{
+	"CarMaxMemberInvalid": "车队需要至少两人。",
+	"AlreadyOwnCar": "{0}已经拥有一支车队。若想取消已有车队，请使用'!remove'。",
+
+}

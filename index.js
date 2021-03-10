@@ -22,14 +22,17 @@ client.on("message", (msg) => {
   if (msg.content === "!help") {
     let message = "车队小助手现有指令：\n" +
                   "!help - 查看指令\n" +
-                  "!request <title>- 组建5人车队\n" +
+                  "!request <title> - 组建5人车队\n" +
                   "!request <title> <x> - 组建x人车队\n" +
+                  "!rename <#> <title> - 给#号车队改名\n" +
                   "!dismiss - 取消已有车队\n" + 
                   "!cars - 查看所有车队\n" + 
                   "!join <#> - 加入#号车队\n" + 
+                  "!tentative <#> - 加入#号车队待定席\n" + 
+                  "!coach <#> - 加入#号车队观战席\n" +
                   "!quit <#> - 离开#号车队\n" +
-                  "!link <faceit_nickname> - 关联FACEIT账号\n" + 
-                  "!stats <faceit_nickname/discord_name> - 查询FACEIT数据";
+                  "!link <faceit_name> - 关联FACEIT账号\n" + 
+                  "!stats <faceit_name/discord_name> - 查询FACEIT数据";
     sendMessage(msg, Utils.createEmbed(message));
   }
 
@@ -56,7 +59,9 @@ client.on("message", (msg) => {
         maxMember,
         leader: msg.author.username,
         id: index,
-        members: [{userid: msg.author.id, name: msg.author.username}]
+        members: [{userid: msg.author.id, name: msg.author.username}],
+        coach: [],
+        tentative: []
       }
       cars.push(car);
       sendMessage(msg, Utils.createEmbed(`${msg.author.username}开始组建新车队，车队编号: ${index}。`));
@@ -108,6 +113,13 @@ client.on("message", (msg) => {
     } else if (car.members.length === car.maxMembers) {
       updateMessage(msg, Utils.createEmbed(`车队${carId}已满员。`, '#cc0000'));
     } else {
+      if (car.tentative.find(member => member.userid === msg.author.id)) {
+        let member = car.tentative.find(member => member.userid === msg.author.id)
+        car.tentative.splice(car.tentative.indexOf(member), 1);
+      } else if (car.coach.find(member => member.userid === msg.author.id)) {
+        let member = car.coach.find(member => member.userid === msg.author.id)
+        car.coach.splice(car.coach.indexOf(member), 1);
+      }
       car.members.push({userid: msg.author.id, name: msg.author.username});
       sendMessage(msg, Utils.createEmbed(`${msg.author.username}已加入车队${carId}。`));
       updateMessage(msg, Utils.createEmbed(`现有车队: ${Utils.getExistingCarsString(cars)}`));
@@ -131,16 +143,14 @@ client.on("message", (msg) => {
     let car = cars.find(car => car.id === carId);
     if (!car) {
       updateMessage(msg, Utils.createEmbed(`车队${carId}不存在。`, '#cc0000'));
-    } else if (!car.members.find(member => member.userid === msg.author.id)) {
-      updateMessage(msg, Utils.createEmbed(`你不在此车队中。`, '#cc0000'));
-    } else {
-      let member = car.members.find(member => member.userid === msg.author.id)
-      car.members.splice(car.members.indexOf(member), 1);
+    } else if (car.coach.find(member => member.userid === msg.author.id)) {
+      let member = car.coach.find(member => member.userid === msg.author.id);
+      car.coach.splice(car.coach.indexOf(member), 1);
       if (car.leader === msg.author.username) {
         if (car.members.length === 0) {
           cars.splice(cars.indexOf(car), 1);
           indices.splice(indices.indexOf(carId), 1);
-          sendMessage(msg, Utils.createEmbed(`车队${carId}已被取消。`, '#cc0000'));
+          sendMessage(msg, Utils.createEmbed(`车队${carId}成员全部离开，车队已被取消。`, '#cc0000'));
           updateMessage(msg, Utils.createEmbed(`现有车队: ${Utils.getExistingCarsString(cars)}`));
         } else {
           car.leader = car.members[0].name;
@@ -150,6 +160,123 @@ client.on("message", (msg) => {
       } else {
         sendMessage(msg, Utils.createEmbed(`${msg.author.username}已离开车队${carId}。`));
         updateMessage(msg, Utils.createEmbed(`现有车队: ${Utils.getExistingCarsString(cars)}`));
+      }
+    } else if (car.tentative.find(member => member.userid === msg.author.id)) {
+      let member = car.tentative.find(member => member.userid === msg.author.id);
+      car.tentative.splice(car.tentative.indexOf(member), 1);
+      if (car.leader === msg.author.username) {
+        if (car.members.length === 0) {
+          cars.splice(cars.indexOf(car), 1);
+          indices.splice(indices.indexOf(carId), 1);
+          sendMessage(msg, Utils.createEmbed(`车队${carId}成员全部离开，车队已被取消。`, '#cc0000'));
+          updateMessage(msg, Utils.createEmbed(`现有车队: ${Utils.getExistingCarsString(cars)}`));
+        } else {
+          car.leader = car.members[0].name;
+          sendMessage(msg, Utils.createEmbed(`${msg.author.username}已离开车队${carId}, 车主移交给${car.members[0].name}。`));
+          updateMessage(msg, Utils.createEmbed(`现有车队: ${Utils.getExistingCarsString(cars)}`));
+        }
+      } else {
+        sendMessage(msg, Utils.createEmbed(`${msg.author.username}已离开车队${carId}。`));
+        updateMessage(msg, Utils.createEmbed(`现有车队: ${Utils.getExistingCarsString(cars)}`));
+      }
+    } else if (!car.members.find(member => member.userid === msg.author.id)) {
+      updateMessage(msg, Utils.createEmbed(`${msg.author.id}不在此车队中。`, '#cc0000'));
+    } else {
+      let member = car.members.find(member => member.userid === msg.author.id)
+      car.members.splice(car.members.indexOf(member), 1);
+      if (car.leader === msg.author.username) {
+        if (car.members.length === 0) {
+          cars.splice(cars.indexOf(car), 1);
+          indices.splice(indices.indexOf(carId), 1);
+          sendMessage(msg, Utils.createEmbed(`车队${carId}成员全部离开，车队已被取消。`, '#cc0000'));
+          updateMessage(msg, Utils.createEmbed(`现有车队: ${Utils.getExistingCarsString(cars)}`));
+        } else {
+          car.leader = car.members[0].name;
+          sendMessage(msg, Utils.createEmbed(`${msg.author.username}已离开车队${carId}, 车主移交给${car.members[0].name}。`));
+          updateMessage(msg, Utils.createEmbed(`现有车队: ${Utils.getExistingCarsString(cars)}`));
+        }
+      } else {
+        sendMessage(msg, Utils.createEmbed(`${msg.author.username}已离开车队${carId}。`));
+        updateMessage(msg, Utils.createEmbed(`现有车队: ${Utils.getExistingCarsString(cars)}`));
+      }
+    }
+  }
+
+  //观战
+  else if (msg.content.startsWith("!coach")) {
+    let args = msg.content.split(" ");
+    if (args.length == 1) {
+      updateMessage(msg, Utils.createEmbed(`请输入想加入的车队编号，如"!coach 1"。查看所有车队请用"!cars"。`, '#cc0000'));
+      return;
+    }
+    let carId = parseInt(args[1]);
+    let car = cars.find(car => car.id === carId);
+    if (!car) {
+      updateMessage(msg, Utils.createEmbed(`车队${carId}不存在。`, '#cc0000'));
+    } else if (car.coach.find(member => member.userid === msg.author.id)) {
+      updateMessage(msg, Utils.createEmbed(`${msg.author.username}已在此车队中观战。`, '#cc0000'));
+    } else {
+      if (car.tentative.find(member => member.userid === msg.author.id)) {
+        let member = car.tentative.find(member => member.userid === msg.author.id)
+        car.tentative.splice(car.tentative.indexOf(member), 1);
+      } else if (car.members.find(member => member.userid === msg.author.id)) {
+        let member = car.members.find(member => member.userid === msg.author.id)
+        car.members.splice(car.members.indexOf(member), 1);
+      }
+      car.coach.push({userid: msg.author.id, name: msg.author.username});
+      sendMessage(msg, Utils.createEmbed(`${msg.author.username}已加入车队${carId}观战席。`));
+      updateMessage(msg, Utils.createEmbed(`现有车队: ${Utils.getExistingCarsString(cars)}`));
+    } 
+  }
+
+  // 待定席
+  else if (msg.content.startsWith("!tentative")) {
+    let args = msg.content.split(" ");
+    if (args.length < 2) {
+      updateMessage(msg, Utils.createEmbed(`请输入想待定的车队编号，如"!tentative 1"。查看所有车队请用"!cars"。`, '#cc0000'));
+    } else {
+      let carId = parseInt(args[1]);
+      let car = cars.find(car => car.id === carId);
+      if (!car) {
+        updateMessage(msg, Utils.createEmbed(`车队${carId}不存在。`, '#cc0000'));
+      } else if (car.tentative.find(member => member.userid === msg.author.id)) {
+        updateMessage(msg, Utils.createEmbed(`${msg.author.username}已在此车队待定。`, '#cc0000'));
+      } else {
+        if (car.members.find(member => member.userid === msg.author.id)) {
+          let member = car.members.find(member => member.userid === msg.author.id)
+          car.members.splice(car.members.indexOf(member), 1);
+        } else if (car.coach.find(member => member.userid === msg.author.id)) {
+          let member = car.coach.find(member => member.userid === msg.author.id)
+          car.coach.splice(car.coach.indexOf(member), 1);
+        }
+        car.tentative.push({userid: msg.author.id, name: msg.author.username});
+        sendMessage(msg, Utils.createEmbed(`${msg.author.username}已加入车队${carId}待定席。`));
+        updateMessage(msg, Utils.createEmbed(`现有车队: ${Utils.getExistingCarsString(cars)}`));
+      } 
+    }
+  }
+
+  // 改名
+  else if (msg.content.startsWith("!rename")) {
+    let args = msg.content.split(" ");
+    if (args.length < 2) {
+      updateMessage(msg, Utils.createEmbed(`请输入想改名的车队编号，如"!rename 1 晚上10:00"。查看所有车队请用"!cars"。`, '#cc0000'));
+    } else {
+      if (args.length < 3) {
+        updateMessage(msg, Utils.createEmbed(`请输入想改名的车队名称，如"!rename 1 晚上10:00"。查看所有车队请用"!cars"。`, '#cc0000'));
+      } else {
+        let carId = parseInt(args[1]);
+        let carName = args[2];
+        let car = cars.find(car => car.id === carId);
+        if (!car) {
+          updateMessage(msg, Utils.createEmbed(`车队${carId}不存在。`, '#cc0000'));
+        } else if (!car.members.find(member => member.userid === msg.author.id)) {
+          updateMessage(msg, Utils.createEmbed(`${msg.author.username}不在此车队中。`, '#cc0000'));
+        } else {
+          car.time = carName;
+          sendMessage(msg, Utils.createEmbed(`${msg.author.username}把车队${carId}名称改为${carName}。`));
+          updateMessage(msg, Utils.createEmbed(`现有车队: ${Utils.getExistingCarsString(cars)}`));
+        } 
       }
     }
   }
@@ -196,7 +323,7 @@ client.on("message", (msg) => {
   }
 });
 
-client.login("Nzg1MzY0MjE2OTY5MTY2ODc4.X82xbA.KghrsK6qvcvXSlNu2Gagr1kM_Hc")
+client.login("Nzg1MzY0MjE2OTY5MTY2ODc4.X82xbA.LdvkU9CmuJ5sIHjIW0h4Wd0o1O4")
 
 const sendMessage = (receivedMessage, sentMessage) => {
   receivedMessage.delete();

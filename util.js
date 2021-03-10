@@ -18,15 +18,36 @@ exports.getExistingCarsString = (cars) => {
 
 	let output = "";
 	for (let car of cars) {
-		let line = `\n[车队${car.id}] - ${car.time} - (${car.members.length}/${car.maxMember})：${getMembersString(car)}`;
+		let line = `\n**#${car.id}** - ${car.time} ${this.getMembersString(car)} ${this.getTentativeString(car)} ${this.getCoachString(car)}`;
 		output += line;
+		output += "\n";
 	}
 	return output;
 }
 
 exports.getMembersString = (car) => {
+	let output = `\n**成员**：(${car.members.length}/${car.maxMember}) `;
 	if (car.members && car.members.length > 0) {
-		return car.members.map(member => member.name).join(", ");
+		output += car.members.map(member => member.name).join(", ");
+		return output;
+	}
+	return "";
+}
+
+exports.getCoachString = (car) => {
+	let output = "\n**观战**：";
+	if (car.coach && car.coach.length > 0) {
+		output += car.coach.map(member => member.name).join(", ");
+		return output;
+	}
+	return "";
+}
+
+exports.getTentativeString = (car) => {
+	let output = "\n**待定**：";
+	if (car.tentative && car.tentative.length > 0) {
+		output += car.tentative.map(member => member.name).join(", ");
+		return output;
 	}
 	return "";
 }
