@@ -323,7 +323,7 @@ client.on("message", (msg) => {
   }
 });
 
-client.login("Nzg1MzY0MjE2OTY5MTY2ODc4.X82xbA.LdvkU9CmuJ5sIHjIW0h4Wd0o1O4")
+client.login("")
 
 const sendMessage = (receivedMessage, sentMessage) => {
   receivedMessage.delete();
